@@ -37,7 +37,7 @@ cp .env.example .env
 
 3. **Run Tests**:
 ```bash
-python test_components.py
+pytest
 ```
 
 4. **Run the Agent**:
