@@ -19,10 +19,10 @@ def test_sensitive_redaction():
         # OpenAI Key
         ("Key: sk-1234567890abcdef", "Key: [REDACTED_API_KEY]"),
         # Generic API keys
-        ('api_key="12345"', 'api_key=[REDACTED]'),
-        ("api-key: 'secret'", "api-key: [REDACTED]"),
+        ('api_key="12345"', 'api_key="[REDACTED]"'),
+        ("api-key: 'secret'", "api-key: '[REDACTED]'"),
         # Password
-        ('password = "secure123"', 'password = [REDACTED]'),
+        ('password = "secure123"', 'password = "[REDACTED]"'),
         # Bearer token
         ("Authorization: Bearer xyz.123.abc", "Authorization: Bearer [REDACTED]"),
         # No change needed

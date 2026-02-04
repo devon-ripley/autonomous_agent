@@ -11,7 +11,7 @@ def test_response_parsing_regex():
     
     # Let's mock the dependencies to init the agent
     with patch('autonomous_agent.Config'), \
-         patch('autonomous_agent.AgentLogger'), \
+         patch('autonomous_agent.logger'), \
          patch('autonomous_agent.ContextManager'), \
          patch('autonomous_agent.LongTermMemory'), \
          patch('autonomous_agent.OpenRouterClient'), \
@@ -42,7 +42,7 @@ robust.
 def test_parse_missing_fields():
     """Test parsing when some fields are missing."""
     with patch('autonomous_agent.Config'), \
-         patch('autonomous_agent.AgentLogger'), \
+         patch('autonomous_agent.logger'), \
          patch('autonomous_agent.ContextManager'), \
          patch('autonomous_agent.LongTermMemory'), \
          patch('autonomous_agent.OpenRouterClient'), \

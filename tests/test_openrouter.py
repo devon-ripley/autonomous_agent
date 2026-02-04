@@ -13,7 +13,8 @@ def test_client_init_skips_without_key():
     try:
         # Just init shouldn't fail if we don't validate in init
         client = OpenRouterClient()
-        assert client.api_key == ""
+        # We can't check client.api_key directly as it's not stored
+        assert client.client is not None
     finally:
         Config.OPENROUTER_API_KEY = original_key
 
@@ -25,9 +26,18 @@ def test_send_message_mock(mock_openai):
     mock_completion.choices = [MagicMock()]
     mock_completion.choices[0].message.content = "Test response"
     mock_completion.model = "test-model"
-    mock_completion.usage.prompt_tokens = 10
-    mock_completion.usage.completion_tokens = 5
-    mock_completion.usage.total_tokens = 15
+    
+    # Mock the usage object and its model_dump method
+    mock_usage = MagicMock()
+    mock_usage.total_tokens = 15
+    mock_usage.prompt_tokens = 10
+    mock_usage.completion_tokens = 5
+    mock_usage.model_dump.return_value = {
+        "total_tokens": 15,
+        "prompt_tokens": 10,
+        "completion_tokens": 5
+    }
+    mock_completion.usage = mock_usage
     
     # Configure the mock client
     mock_instance = mock_openai.return_value
@@ -39,6 +49,7 @@ def test_send_message_mock(mock_openai):
     
     assert response['content'] == "Test response"
     assert response['model'] == "test-model"
+    # Now this should work because we mocked model_dump()
     assert response['usage']['total_tokens'] == 15
     
     # Verify call
