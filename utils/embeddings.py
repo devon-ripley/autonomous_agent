@@ -16,8 +16,10 @@ class EmbeddingGenerator:
         Args:
             model_name: Name of the sentence transformer model to use
         """
+        print(f"Loading embedding model '{model_name}'... (this may take a moment on first run)")
         self.model = SentenceTransformer(model_name)
         self.dimension = self.model.get_sentence_embedding_dimension()
+        print(f"Embedding model loaded (dimension: {self.dimension})")
     
     def generate(self, text: str) -> List[float]:
         """

@@ -1,11 +1,13 @@
 """
 Command execution engine for running shell commands.
 Handles subprocess management, timeouts, and output capture.
+Cross-platform support for Windows and Unix.
 """
 import subprocess
 import time
+import platform
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Dict
 from config import Config
 
 
@@ -24,15 +26,76 @@ class ExecutionResult:
 class CommandExecutor:
     """Executes shell commands with timeout and output capture."""
     
-    def __init__(self, shell: str = "bash"):
+    # Platform detection
+    IS_WINDOWS = platform.system() == "Windows"
+    
+    def __init__(self, shell: Optional[str] = None):
         """
         Initialize the command executor.
         
         Args:
-            shell: Shell to use for command execution (bash, sh, etc.)
+            shell: Shell to use for command execution. Auto-detected if not specified.
+                   Unix: bash, sh, zsh
+                   Windows: cmd, powershell
         """
-        self.shell = shell
-        self.running_processes = {}
+        self.shell = shell or self._detect_shell()
+        self.running_processes: Dict[int, subprocess.Popen] = {}
+    
+    def _detect_shell(self) -> str:
+        """Detect the appropriate shell for the current platform."""
+        if self.IS_WINDOWS:
+            # Prefer PowerShell on Windows, fallback to cmd
+            try:
+                result = subprocess.run(
+                    ["powershell", "-Command", "echo test"],
+                    capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0:
+                    return "powershell"
+            except Exception:
+                pass
+            return "cmd"
+        else:
+            # Prefer bash on Unix, fallback to sh
+            import shutil
+            if shutil.which("bash"):
+                return "bash"
+            return "sh"
+    
+    def _get_executable(self, shell_cmd: str) -> Optional[str]:
+        """Get the executable path for the given shell (cross-platform)."""
+        if self.IS_WINDOWS:
+            # Windows doesn't need explicit executable for shell=True
+            return None
+        else:
+            # Unix systems need explicit executable path
+            import shutil
+            executable = shutil.which(shell_cmd)
+            if executable:
+                return executable
+            # Fallback to common paths
+            common_paths = [f"/bin/{shell_cmd}", f"/usr/bin/{shell_cmd}"]
+            for path in common_paths:
+                if subprocess.run(["test", "-x", path], capture_output=True).returncode == 0:
+                    return path
+            return None
+    
+    def cleanup_finished_processes(self) -> int:
+        """
+        Clean up finished async processes from tracking dict.
+        
+        Returns:
+            Number of processes cleaned up
+        """
+        finished = []
+        for pid, process in self.running_processes.items():
+            if process.poll() is not None:  # Process has finished
+                finished.append(pid)
+        
+        for pid in finished:
+            del self.running_processes[pid]
+        
+        return len(finished)
     
     def _truncate_output(self, output: str) -> str:
         """Truncate output to configured max size."""
@@ -64,15 +127,21 @@ class CommandExecutor:
         timeout = timeout or Config.COMMAND_TIMEOUT
         shell_cmd = shell or self.shell
         
+        # Periodically clean up finished async processes
+        self.cleanup_finished_processes()
+        
         start_time = time.time()
         timed_out = False
         
         try:
+            # Get cross-platform executable path
+            executable = self._get_executable(shell_cmd)
+            
             # Execute command
             process = subprocess.Popen(
                 command,
                 shell=True,
-                executable=f"/bin/{shell_cmd}" if shell_cmd else None,
+                executable=executable,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -129,11 +198,12 @@ class CommandExecutor:
             Process ID
         """
         shell_cmd = shell or self.shell
+        executable = self._get_executable(shell_cmd)
         
         process = subprocess.Popen(
             command,
             shell=True,
-            executable=f"/bin/{shell_cmd}" if shell_cmd else None,
+            executable=executable,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -162,10 +232,20 @@ class CommandExecutor:
     
     def check_sudo_available(self) -> bool:
         """
-        Check if sudo is available on the system.
+        Check if sudo/elevated privileges are available on the system.
         
         Returns:
-            True if sudo is available
+            True if sudo is available (Unix) or running as admin (Windows)
         """
-        result = self.execute("which sudo", timeout=5)
-        return result.success and result.stdout.strip() != ""
+        if self.IS_WINDOWS:
+            # Check if running as administrator on Windows
+            try:
+                import ctypes
+                return ctypes.windll.shell32.IsUserAnAdmin() != 0
+            except Exception:
+                return False
+        else:
+            # Check if sudo is available on Unix
+            result = self.execute("which sudo", timeout=5)
+            return result.success and result.stdout.strip() != ""
+

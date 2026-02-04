@@ -10,6 +10,22 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _safe_int(value: str, default: int) -> int:
+    """Safely parse an integer from string, returning default on failure."""
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+
+def _safe_float(value: str, default: float) -> float:
+    """Safely parse a float from string, returning default on failure."""
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+
 class Config:
     """Central configuration for the autonomous agent."""
     
@@ -20,17 +36,17 @@ class Config:
     
     # Agent Configuration
     INITIAL_GOAL: str = os.getenv("INITIAL_GOAL", "Build yourself into a personal assistant with useful tools")
-    COMMAND_TIMEOUT: int = int(os.getenv("COMMAND_TIMEOUT", "300"))
-    MAX_RETRIES: int = int(os.getenv("MAX_RETRIES", "3"))
+    COMMAND_TIMEOUT: int = _safe_int(os.getenv("COMMAND_TIMEOUT", "300"), 300)
+    MAX_RETRIES: int = _safe_int(os.getenv("MAX_RETRIES", "3"), 3)
     
     # Continuous Mode - Agent generates new goals after completing current one
     CONTINUOUS_MODE: bool = os.getenv("CONTINUOUS_MODE", "true").lower() == "true"
     
     # Rate Limiting
-    RATE_LIMIT_SECONDS: float = float(os.getenv("RATE_LIMIT_SECONDS", "2.0"))
+    RATE_LIMIT_SECONDS: float = _safe_float(os.getenv("RATE_LIMIT_SECONDS", "2.0"), 2.0)
     
     # Output Limits
-    MAX_OUTPUT_SIZE: int = int(os.getenv("MAX_OUTPUT_SIZE", "10000"))  # Max chars to keep
+    MAX_OUTPUT_SIZE: int = _safe_int(os.getenv("MAX_OUTPUT_SIZE", "10000"), 10000)  # Max chars to keep
     
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
@@ -46,12 +62,16 @@ class Config:
     SUMMARIES_DIR: Path = MEMORY_DIR / "summaries"
     
     # Memory Configuration
-    MEMORY_TOP_K: int = int(os.getenv("MEMORY_TOP_K", "5"))
-    CONTEXT_MAX_TOKENS: int = int(os.getenv("CONTEXT_MAX_TOKENS", "8000"))
+    MEMORY_TOP_K: int = _safe_int(os.getenv("MEMORY_TOP_K", "5"), 5)
+    CONTEXT_MAX_TOKENS: int = _safe_int(os.getenv("CONTEXT_MAX_TOKENS", "8000"), 8000)
     
     # LLM Configuration
-    TEMPERATURE: float = float(os.getenv("TEMPERATURE", "0.7"))
-    MAX_TOKENS: int = int(os.getenv("MAX_TOKENS", "4000"))
+    TEMPERATURE: float = _safe_float(os.getenv("TEMPERATURE", "0.7"), 0.7)
+    MAX_TOKENS: int = _safe_int(os.getenv("MAX_TOKENS", "4000"), 4000)
+    
+    # Terminal User Credentials (for sudo access)
+    TERMINAL_USERNAME: str = os.getenv("TERMINAL_USERNAME", "")
+    TERMINAL_PASSWORD: str = os.getenv("TERMINAL_PASSWORD", "")
     
     # Validation state
     _validated: bool = False

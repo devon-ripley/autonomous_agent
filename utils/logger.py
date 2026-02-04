@@ -18,6 +18,17 @@ class AgentLogger:
     _instance: Optional['AgentLogger'] = None
     _initialized: bool = False
     
+    # Patterns to redact from logs (regex patterns)
+    SENSITIVE_PATTERNS = [
+        (r'(sk-or-v1-[a-zA-Z0-9]+)', '[REDACTED_OPENROUTER_KEY]'),  # OpenRouter keys
+        (r'(sk-[a-zA-Z0-9]{10,})', '[REDACTED_API_KEY]'),  # OpenAI-style keys
+        (r'(api[_-]?key["\s:=]+)["\']?([^"\'\s,}]+)', r'\1[REDACTED]'),  # Generic API keys
+        (r'(password["\s:=]+)["\']?([^"\'\s,}]+)', r'\1[REDACTED]'),  # Passwords
+        (r'(secret["\s:=]+)["\']?([^"\'\s,}]+)', r'\1[REDACTED]'),  # Secrets
+        (r'(token["\s:=]+)["\']?([^"\'\s,}]+)', r'\1[REDACTED]'),  # Tokens
+        (r'(bearer\s+)([a-zA-Z0-9._-]+)', r'\1[REDACTED]'),  # Bearer tokens
+    ]
+    
     def __new__(cls, *args, **kwargs):
         """Singleton pattern - only one logger instance."""
         if cls._instance is None:
@@ -39,6 +50,14 @@ class AgentLogger:
         self.error_logger = None
         self.debug_logger = None
         self.console_logger = None
+    
+    def _redact_sensitive(self, text: str) -> str:
+        """Redact sensitive information from text before logging."""
+        import re
+        result = text
+        for pattern, replacement in self.SENSITIVE_PATTERNS:
+            result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
+        return result
     
     def _ensure_initialized(self):
         """Lazily initialize loggers on first use."""
@@ -84,16 +103,20 @@ class AgentLogger:
         return logger
     
     def log_llm_request(self, messages: list, model: str):
-        """Log an LLM request."""
+        """Log an LLM request with sensitive data redacted."""
         self._ensure_initialized()
         self.audit_logger.info(f"LLM Request to {model}")
-        self.audit_logger.debug(f"Messages: {json.dumps(messages, indent=2)}")
+        # Redact sensitive data from messages before logging
+        redacted_messages = self._redact_sensitive(json.dumps(messages, indent=2))
+        self.audit_logger.debug(f"Messages: {redacted_messages}")
     
     def log_llm_response(self, response: str, usage: Dict = None):
-        """Log an LLM response."""
+        """Log an LLM response with sensitive data redacted."""
         self._ensure_initialized()
         self.audit_logger.info("LLM Response received")
-        self.audit_logger.debug(f"Response: {response}")
+        # Redact sensitive data from response before logging
+        redacted_response = self._redact_sensitive(response)
+        self.audit_logger.debug(f"Response: {redacted_response}")
         if usage:
             self.audit_logger.info(f"Token usage: {usage}")
     
