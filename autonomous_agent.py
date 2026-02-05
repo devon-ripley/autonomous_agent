@@ -195,7 +195,7 @@ class AutonomousAgent:
         
         # Format recent commands
         recent_commands_text = "\n".join([
-            f"- {r['command']}: {'Success' if r['success'] else 'Failed'}"
+            f"- {r['command']}: {'Success' if r['success'] else 'Failed'}\n  Output: {r.get('output', '')[:200]}"
             for r in recent_results
         ])
         

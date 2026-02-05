@@ -22,10 +22,10 @@ class AgentLogger:
     SENSITIVE_PATTERNS = [
         (r'(sk-or-v1-[a-zA-Z0-9]+)', '[REDACTED_OPENROUTER_KEY]'),  # OpenRouter keys
         (r'(sk-[a-zA-Z0-9]{10,})', '[REDACTED_API_KEY]'),  # OpenAI-style keys
-        (r'(api[_-]?key["\s:=]+)["\']?([^"\'\s,}]+)', r'\1[REDACTED]'),  # Generic API keys
-        (r'(password["\s:=]+)["\']?([^"\'\s,}]+)', r'\1[REDACTED]'),  # Passwords
-        (r'(secret["\s:=]+)["\']?([^"\'\s,}]+)', r'\1[REDACTED]'),  # Secrets
-        (r'(token["\s:=]+)["\']?([^"\'\s,}]+)', r'\1[REDACTED]'),  # Tokens
+        (r'(api[_-]?key["\s:=]+)(["\']?)([^"\'\s,}]+)', r'\1\2[REDACTED]'),  # Generic API keys
+        (r'(password["\s:=]+)(["\']?)([^"\'\s,}]+)', r'\1\2[REDACTED]'),  # Passwords
+        (r'(secret["\s:=]+)(["\']?)([^"\'\s,}]+)', r'\1\2[REDACTED]'),  # Secrets
+        (r'(token["\s:=]+)(["\']?)([^"\'\s,}]+)', r'\1\2[REDACTED]'),  # Tokens
         (r'(bearer\s+)([a-zA-Z0-9._-]+)', r'\1[REDACTED]'),  # Bearer tokens
     ]
     
