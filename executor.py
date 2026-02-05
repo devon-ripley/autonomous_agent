@@ -142,11 +142,11 @@ class CommandExecutor:
         
         # Construct command with CWD capture based on shell
         if self.shell == "powershell":
-            command = f"{command}; Write-Output '{marker}'$PWD"
+            command = f"{command}; $LAST_EXIT = $LASTEXIT; Write-Output '{marker}'$PWD; exit $LAST_EXIT"
         elif self.shell == "cmd":
-            command = f"{command} & echo {marker}%CD%"
+            command = f"{command} & set LAST_EXIT=%ERRORLEVEL% & echo {marker}%CD% & exit /b %LAST_EXIT%"
         else: # bash, sh
-            command = f"{command}; echo '{marker}'$PWD"
+            command = f"{command}; LAST_EXIT=$?; echo '{marker}'$PWD; exit $LAST_EXIT"
             
         # Inject sudo -v for Linux if needed (keeps the logic we just added)
         if not self.IS_WINDOWS and "sudo" in command and Config.SUDO_PASSWORD:
