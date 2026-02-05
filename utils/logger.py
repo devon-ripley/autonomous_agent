@@ -224,6 +224,10 @@ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         self.console_logger.info(f"[bold blue][LEARNING][/bold blue] {learning[:100]}...")
 
 
+    def spinner(self, text: str):
+        """Context manager for a loading spinner."""
+        return self.console.status(text, spinner="dots")
+
 def get_logger() -> AgentLogger:
     """Get the global logger instance (creates on first call)."""
     return AgentLogger()

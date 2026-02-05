@@ -137,6 +137,16 @@ class CommandExecutor:
             # Get cross-platform executable path
             executable = self._get_executable(shell_cmd)
             
+            # Handle automatic sudo authentication (Linux/Unix only)
+            if not self.IS_WINDOWS and command.strip().startswith("sudo") and Config.SUDO_PASSWORD:
+                # If command is 'sudo ...' and not already using -S
+                if " -S " not in command and not command.startswith("echo"):
+                    pass_str = Config.SUDO_PASSWORD.strip()
+                    # Rewrite: echo "password" | sudo -S command
+                    # Remove 'sudo' from start to avoid double sudo
+                    actual_cmd = command.strip()[4:].strip()
+                    command = f"echo '{pass_str}' | sudo -S {actual_cmd}"
+
             # Execute command
             process = subprocess.Popen(
                 command,

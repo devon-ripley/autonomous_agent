@@ -250,7 +250,10 @@ Important: Each field can span multiple lines. Start each field with its label f
         try:
             logger.log_llm_request(messages, self.llm_client.model)
             start_time = time.time()
-            response = self.llm_client.send_message(messages)
+            
+            with logger.spinner("Thinking..."):
+                response = self.llm_client.send_message(messages)
+                
             duration = time.time() - start_time
             logger.log_info(f"[bold purple][THINKING][/bold purple] Request took {duration:.2f}s")
             logger.log_llm_response(response['content'], response.get('usage'))

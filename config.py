@@ -62,6 +62,9 @@ class Config:
     SUMMARIES_DIR: Path = MEMORY_DIR / "summaries"
     SCRATCHPAD_FILE: Path = DATA_DIR / "scratchpad.md"
     
+    # Auth
+    SUDO_PASSWORD: str = os.getenv("SUDO_PASSWORD", "")
+    
     # Memory Configuration
     MEMORY_TOP_K: int = _safe_int(os.getenv("MEMORY_TOP_K", "5"), 5)
     CONTEXT_MAX_TOKENS: int = _safe_int(os.getenv("CONTEXT_MAX_TOKENS", "8000"), 8000)

@@ -130,7 +130,10 @@ Format your response as JSON:
         try:
             start_time = time.time()
             logger.log_llm_request(messages, self.llm_client.model)
-            response = self.llm_client.send_message(messages, temperature=0.3)
+            
+            with logger.spinner("Generating Plan..."):
+                response = self.llm_client.send_message(messages, temperature=0.3)
+                
             duration = time.time() - start_time
             logger.log_info(f"[bold blue][PLANNING][/bold blue] Creation took {duration:.2f}s")
             logger.log_llm_response(response['content'], response.get('usage'))
