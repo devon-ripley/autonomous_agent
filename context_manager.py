@@ -60,8 +60,9 @@ class ContextManager:
         execution['timestamp'] = datetime.now().isoformat()
         self.execution_history.append(execution)
         
-        # Store in long-term memory if significant
-        if execution.get('success') or execution.get('learning'):
+        # Store in long-term memory ONLY if there is a specific learning
+        # This prevents trivial commands (ls, cd) from generating expensive embeddings
+        if execution.get('learning') and str(execution.get('learning')).strip():
             self.memory.store_experience(
                 {
                     "command": execution.get('command', ''),

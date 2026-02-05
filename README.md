@@ -4,7 +4,8 @@ An experimental autonomous agent with unrestricted terminal access, powered by O
 
 ## Features
 
-- **Unrestricted Terminal Access**: Execute any bash/shell command autonomously
+- **Cross-Platform Support**: Works on Windows (PowerShell) and Linux (Bash)
+- **Unrestricted Terminal Access**: Execute any shell command autonomously
 - **Multi-Step Planning**: Break down complex goals into executable steps
 - **Long-Term Memory**: ChromaDB-powered semantic search for learning from past experiences
 - **Continuous Mode**: AI automatically generates new goals after completing current ones
@@ -43,19 +44,22 @@ pytest
 4. **Run the Agent**:
 ```bash
 # Start with default goal (continuous mode enabled by default)
-python3 autonomous_agent.py
+python autonomous_agent.py
 
 # Custom goal
-python3 autonomous_agent.py --goal "Set up a Python web server"
+python autonomous_agent.py --goal "Set up a Python web server"
 
 # Resume from previous session
-python3 autonomous_agent.py --resume
+python autonomous_agent.py --resume
 
 # Disable continuous mode (stop after completing goal)
-python3 autonomous_agent.py --no-continuous
+python autonomous_agent.py --no-continuous
 
 # View memory statistics
-python3 autonomous_agent.py --memory-stats
+python autonomous_agent.py --memory-stats
+
+# Reset agent (clear all memory/logs)
+python reset_agent.py
 ```
 
 ## Continuous Mode
@@ -77,7 +81,7 @@ The AI considers:
 ⚠️ **CAUTION**: This agent has unrestricted terminal access. 
 
 **Recommended Setup**:
-- Run in isolated Linux VM
+- Run in isolated VM environment (Windows/Linux)
 - Regular VM snapshots
 - Monitor resource usage
 - Do not use on production systems
