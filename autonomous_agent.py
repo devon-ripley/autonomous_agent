@@ -252,7 +252,7 @@ Important: Each field can span multiple lines. Start each field with its label f
             start_time = time.time()
             response = self.llm_client.send_message(messages)
             duration = time.time() - start_time
-            logger.log_info(f"LLM request took {duration:.2f}s")
+            logger.log_info(f"[bold purple][THINKING][/bold purple] Request took {duration:.2f}s")
             logger.log_llm_response(response['content'], response.get('usage'))
             
             # Parse response with multi-line support

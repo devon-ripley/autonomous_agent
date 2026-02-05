@@ -141,7 +141,7 @@ class ContextManager:
         results = self.memory.recall_similar(query, limit=limit)
         duration = time.time() - start_time
         if duration > 0.5:
-             logger.log_info(f"Memory retrieval took {duration:.2f}s")
+             logger.log_info(f"[bold yellow][MEMORY][/bold yellow] Retrieval took {duration:.2f}s")
         return results
     
     def get_scratchpad_content(self) -> str:

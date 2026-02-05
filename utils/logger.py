@@ -78,7 +78,14 @@ class AgentLogger:
         self.console_logger = logging.getLogger("console")
         self.console_logger.setLevel(logging.INFO)
         if not self.console_logger.handlers:
-            console_handler = RichHandler(console=self.console, rich_tracebacks=True)
+            console_handler = RichHandler(
+                console=self.console, 
+                rich_tracebacks=True,
+                markup=True,  # Interpret [bold] tags
+                show_path=False,  # Hide logger.py:127
+                show_time=False,  # Minimalist look
+                show_level=False  # Hide INFO/ERROR labels for raw look
+            )
             console_handler.setFormatter(logging.Formatter("%(message)s"))
             self.console_logger.addHandler(console_handler)
         
@@ -124,12 +131,12 @@ class AgentLogger:
         """Log command execution."""
         self._ensure_initialized()
         self.audit_logger.info(f"Executing command: {command}")
-        self.console_logger.info(f"[bold cyan]→ Executing:[/bold cyan] {command}")
+        self.console_logger.info(f"[bold cyan][EXEC][/bold cyan] {command}")
     
     def log_command_result(self, result: Any):
         """Log command execution result."""
         self._ensure_initialized()
-        status = "✓ Success" if result.success else "✗ Failed"
+        status = "[SUCCESS]" if result.success else "[FAILED]"
         color = "green" if result.success else "red"
         
         self.audit_logger.info(
@@ -208,13 +215,13 @@ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         self.audit_logger.info(f"New goal generated")
         self.audit_logger.info(f"Old: {old_goal}")
         self.audit_logger.info(f"New: {new_goal}")
-        self.console_logger.info(f"[bold magenta]🎯 New Goal:[/bold magenta] {new_goal}")
+        self.console_logger.info(f"[bold magenta][GOAL][/bold magenta] {new_goal}")
     
     def log_learning(self, learning: str):
         """Log a learning that was stored to memory."""
         self._ensure_initialized()
         self.state_logger.info(f"Learning stored: {learning}")
-        self.console_logger.info(f"[bold blue]💡 Learned:[/bold blue] {learning[:100]}...")
+        self.console_logger.info(f"[bold blue][LEARNING][/bold blue] {learning[:100]}...")
 
 
 def get_logger() -> AgentLogger:
