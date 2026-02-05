@@ -5,24 +5,25 @@ An experimental autonomous agent with unrestricted terminal access, powered by O
 ## Features
 
 - **Cross-Platform Support**: Works on Windows (PowerShell) and Linux (Bash)
-- **Unrestricted Terminal Access**: Execute any shell command autonomously
-- **Multi-Step Planning**: Break down complex goals into executable steps
+- **Safe Execution**: **Critic Agent** reviews every command for danger (e.g., `rm -rf /`) before execution
+- **Dynamic Tool Registry**: Self-evolving architecture that auto-discovers Python tools in `tools/`
+- **Web Capabilities**: Built-in **Web Search** and **Web Scraper** to solve errors autonomously
+- **Smart Analysis**: Tools for structure mapping (`list_structure`) and surgical file reading (`read_file`)
+- **Robust Protocol**: Uses strict JSON communication to eliminate syntax errors
+- **Stateful Shell**: Persists `cd` changes and session state just like a real terminal
 - **Long-Term Memory**: ChromaDB-powered semantic search for learning from past experiences
 - **Continuous Mode**: AI automatically generates new goals after completing current ones
-- **LLM-Assisted Error Recovery**: Ask LLM for fixes when commands fail
-- **Learning Storage**: Captures and stores insights for future use
-- **Scratchpad System**: Persistent markdown notebook (`data/scratchpad.md`) for maintaining short-term context
-- **Error Recovery**: Automatic retry logic with past solution lookup
-- **State Persistence**: Resume from previous sessions
-- **Rate Limiting**: Configurable delay between API calls
-- **Output Limits**: Prevents memory issues from large command outputs
-- **Comprehensive Logging**: Audit trails, state logs, and error tracking
+- **Scratchpad System**: Persistent markdown notebook (`data/scratchpad.md`) for context tracking
 
 ## Architecture
 
+- **Multi-Agent Brain**:
+    - **Planner**: Decomposes high-level goals
+    - **Executor**: Converting intent into shell commands
+    - **Critic**: Safety filter and code reviewer
 - **OpenRouter Integration**: LLM-powered decision making
 - **Vector Database**: Semantic memory with ChromaDB
-- **Modular Design**: Separate components for execution, planning, memory, and context
+- **Tool Registry**: Dynamic plugin system for agent capabilities
 
 ## Setup
 
@@ -61,6 +62,21 @@ python autonomous_agent.py --memory-stats
 
 # Reset agent (clear all memory/logs)
 python reset_agent.py
+```
+
+## Docker Setup (Recommended)
+
+For a safe, isolated environment, run the agent in Docker:
+
+```bash
+# Build and start
+docker compose up --build -d
+
+# Attach to the container output (to see logs)
+docker compose logs -f
+
+# OR to interact with shell (if using tty)
+docker attach auto_agent
 ```
 
 ## Continuous Mode

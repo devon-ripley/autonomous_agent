@@ -1,0 +1,17 @@
+services:
+  agent:
+    build: .
+    image: autonomous-agent
+    container_name: auto_agent
+    environment:
+      - TERM=xterm-256color
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./.env:/app/.env
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    deploy:
+      resources:
+        limits:
+          memory: 4G

@@ -40,6 +40,7 @@ class CommandExecutor:
         """
         self.shell = shell or self._detect_shell()
         self.running_processes: Dict[int, subprocess.Popen] = {}
+        self.cwd: str = "."  # Track current working directory
     
     def _detect_shell(self) -> str:
         """Detect the appropriate shell for the current platform."""
@@ -127,26 +128,48 @@ class CommandExecutor:
         timeout = timeout or Config.COMMAND_TIMEOUT
         shell_cmd = shell or self.shell
         
-        # Periodically clean up finished async processes
         self.cleanup_finished_processes()
         
         start_time = time.time()
         timed_out = False
         
+        # Determine working directory (prioritize arg, then state)
+        current_cwd = cwd or self.cwd
+        
+        # Append CWD capture to command to track directory changes
+        marker = "__CWD__:"
+        original_command = command
+        
+        # Construct command with CWD capture based on shell
+        if self.shell == "powershell":
+            command = f"{command}; Write-Output '{marker}'$PWD"
+        elif self.shell == "cmd":
+            command = f"{command} & echo {marker}%CD%"
+        else: # bash, sh
+            command = f"{command}; echo '{marker}'$PWD"
+            
+        # Inject sudo -v for Linux if needed (keeps the logic we just added)
+        if not self.IS_WINDOWS and "sudo" in command and Config.SUDO_PASSWORD:
+             # Logic is complex with appended CWD. 
+             # We want: echo pass | sudo -v && (command; echo CWD)
+             # The previous logic prepended to 'command'.
+             # Let's apply sudo logic to original_command first, then append CWD?
+             pass # Logic handled below cleaner
+        
+        # handling sudo + persistent CWD
+        if not self.IS_WINDOWS and "sudo" in original_command and Config.SUDO_PASSWORD:
+            pass_str = Config.SUDO_PASSWORD.strip()
+            # echo pass | sudo -S -v && (original_command; echo marker$PWD)
+            # Use parentheses to ensure CWD capture happens even if command fails? 
+            # Or just use semicolon.
+            # safe_cmd: echo pass | sudo -S -v && { original_command; echo marker$PWD; }
+            # But { } requires bash.
+            command = f"echo '{pass_str}' | sudo -S -v && {command}"
+        
         try:
             # Get cross-platform executable path
             executable = self._get_executable(shell_cmd)
             
-            # Handle automatic sudo authentication (Linux/Unix only)
-            if not self.IS_WINDOWS and command.strip().startswith("sudo") and Config.SUDO_PASSWORD:
-                # If command is 'sudo ...' and not already using -S
-                if " -S " not in command and not command.startswith("echo"):
-                    pass_str = Config.SUDO_PASSWORD.strip()
-                    # Rewrite: echo "password" | sudo -S command
-                    # Remove 'sudo' from start to avoid double sudo
-                    actual_cmd = command.strip()[4:].strip()
-                    command = f"echo '{pass_str}' | sudo -S {actual_cmd}"
-
             # Execute command
             process = subprocess.Popen(
                 command,
@@ -155,7 +178,7 @@ class CommandExecutor:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                cwd=cwd,
+                cwd=current_cwd,
             )
             
             # Wait for completion with timeout
@@ -168,6 +191,21 @@ class CommandExecutor:
                 timed_out = True
                 stderr = f"[TIMEOUT after {timeout}s]\n{stderr}"
             
+            # Extract new CWD from output
+            if marker in stdout:
+                parts = stdout.split(marker)
+                # The marker + path should be at the end
+                if len(parts) >= 2:
+                    potential_cwd = parts[-1].strip()
+                    # Validate it's a path
+                    import os
+                    if os.path.exists(potential_cwd):
+                        self.cwd = potential_cwd
+                    
+                    # Remove the marker line from stdout for clean logging
+                    # Reconstruct stdout without the last part
+                    stdout = "".join(parts[:-1]).strip()
+            
             execution_time = time.time() - start_time
             return_code = process.returncode
             
@@ -176,7 +214,7 @@ class CommandExecutor:
             stderr = self._truncate_output(stderr)
             
             return ExecutionResult(
-                command=command,
+                command=original_command, # Log the original command
                 stdout=stdout,
                 stderr=stderr,
                 return_code=return_code,

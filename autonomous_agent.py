@@ -50,6 +50,14 @@ class AutonomousAgent:
         self.context = ContextManager(self.memory)
         self.planner = Planner(self.llm_client)
         
+        # Initialize Tool Registry for dynamic discovery
+        from utils.tool_registry import ToolRegistry
+        self.tool_registry = ToolRegistry(Config.BASE_DIR / "tools")
+
+        # Initialize Critic Agent
+        from agents.critic_agent import CriticAgent
+        self.critic = CriticAgent(self.llm_client)
+        
         # Set up signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -151,7 +159,27 @@ class AutonomousAgent:
         
         # Execute the command
         if step.command and step.command.strip():
-            result = self._execute_command(step.command)
+            # Critic Review
+            with logger.spinner("Critic is reviewing..."):
+                review = self.critic.review_action(
+                    {'command': step.command, 'reasoning': 'Executing planned step'}, 
+                    self.goal, 
+                    f"Step: {step.description}"
+                )
+            
+            if not review.get('approved', True):
+                feedback = review.get('feedback', 'Rejected by safety policy.')
+                logger.console_logger.print(f"[bold red]Critic Rejected:[/bold red] {feedback}")
+                result = ExecutionResult(
+                    command=step.command,
+                    stdout="",
+                    stderr=f"CRITIC BLOCKED EXECUTION: {feedback}",
+                    return_code=1,
+                    success=False
+                )
+            else:
+                # Approved - Proceed to execute
+                result = self._execute_command(step.command)
             
             # Update step with result
             self.planner.update_step_result(
@@ -219,7 +247,9 @@ You can execute any bash/shell command. You should:
 4. Adapt your plan based on results
 5. Be resourceful and creative
 6. Remember useful patterns and solutions for future use
-7. Use 'data/scratchpad.md' to keep notes, todo lists, and track temporary state (use reading/writing commands)"""
+7. Use 'data/scratchpad.md' to keep notes, todo lists, and track temporary state (use reading/writing commands)
+
+{self.tool_registry.get_registry_prompt()}"""
         
         user_prompt = f"""Current Step: {step.description}
 Expected Outcome: {step.expected_outcome}
@@ -233,13 +263,13 @@ Recent Command History:
 Relevant Past Experiences:
 {memories_text if memories_text else "No relevant memories yet"}
 
-Provide your next action in this EXACT format:
-REASONING: <why this action helps achieve the goal, including any relevant past learnings>
-COMMAND: <exact bash/shell command to execute>
-EXPECTED: <what you expect to happen>
-LEARNING: <what you learned that should be remembered for the future - leave empty if nothing notable>
-
-Important: Each field can span multiple lines. Start each field with its label followed by a colon.
+Provide your next action as a JSON object with the following schema:
+{{
+    "reasoning": "<why this action helps achieve the goal>",
+    "command": "<exact bash/shell command to execute>",
+    "expected": "<what you expect to happen>",
+    "learning": "<what you learned - optional>"
+}}
 """
         
         messages = [
@@ -266,28 +296,53 @@ Important: Each field can span multiple lines. Start each field with its label f
             return None
     
     def _parse_action_response(self, response: str) -> dict:
-        """
-        Parse LLM response for action details with multi-line support.
+        """Parse LLM response for action details using JSON."""
+        import json
         
-        Uses regex to extract fields that may span multiple lines.
-        """
+        try:
+            # Clean up response to find JSON content
+            content = response.strip()
+            
+            # extract from code block if present
+            if "```" in content:
+                # regex to find json block
+                match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, re.DOTALL)
+                if match:
+                    content = match.group(1)
+            
+            # Find the first { and last }
+            start = content.find('{')
+            end = content.rfind('}')
+            
+            if start != -1 and end != -1:
+                content = content[start:end+1]
+                data = json.loads(content)
+                return {
+                    'command': data.get('command', ''),
+                    'reasoning': data.get('reasoning', ''),
+                    'expected': data.get('expected', ''),
+                    'learning': data.get('learning', '')
+                }
+                
+        except json.JSONDecodeError as e:
+            logger.log_error(e, f"Failed to parse JSON response: {response[:100]}...")
+            
+        # Fallback for legacy format or failure
+        return self._parse_action_response_legacy(response)
+
+    def _parse_action_response_legacy(self, response: str) -> dict:
+        """Legacy regex parser."""
         result = {}
-        
-        # Pattern matches FIELD: content (including newlines until next FIELD: or end)
         patterns = {
             'reasoning': r'REASONING:\s*(.*?)(?=\n(?:COMMAND|EXPECTED|LEARNING):|$)',
             'command': r'COMMAND:\s*(.*?)(?=\n(?:REASONING|EXPECTED|LEARNING):|$)',
             'expected': r'EXPECTED:\s*(.*?)(?=\n(?:REASONING|COMMAND|LEARNING):|$)',
             'learning': r'LEARNING:\s*(.*?)(?=\n(?:REASONING|COMMAND|EXPECTED):|$)',
         }
-        
         for field, pattern in patterns.items():
             match = re.search(pattern, response, re.DOTALL | re.IGNORECASE)
             if match:
-                value = match.group(1).strip()
-                # Clean up the value
-                result[field] = value
-        
+                result[field] = match.group(1).strip()
         return result
     
     def _store_learning(self, learning: str, context: str):
