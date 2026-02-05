@@ -3,6 +3,7 @@ Multi-step planning system for autonomous agent.
 Creates, manages, and revises plans based on execution results.
 """
 import json
+import time
 import uuid
 from datetime import datetime
 from typing import List, Optional, Dict, Any
@@ -127,8 +128,11 @@ Format your response as JSON:
         ]
         
         try:
+            start_time = time.time()
             logger.log_llm_request(messages, self.llm_client.model)
             response = self.llm_client.send_message(messages, temperature=0.3)
+            duration = time.time() - start_time
+            logger.log_info(f"Plan creation took {duration:.2f}s")
             logger.log_llm_response(response['content'], response.get('usage'))
             
             # Parse response

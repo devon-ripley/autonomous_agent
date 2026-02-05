@@ -60,6 +60,7 @@ class Config:
     MEMORY_DIR: Path = DATA_DIR / "memory"
     VECTOR_DB_DIR: Path = MEMORY_DIR / "vector_db"
     SUMMARIES_DIR: Path = MEMORY_DIR / "summaries"
+    SCRATCHPAD_FILE: Path = DATA_DIR / "scratchpad.md"
     
     # Memory Configuration
     MEMORY_TOP_K: int = _safe_int(os.getenv("MEMORY_TOP_K", "5"), 5)

@@ -3,6 +3,7 @@ Context manager for maintaining agent state and conversation history.
 Integrates with long-term memory for relevant context retrieval.
 """
 import json
+import time
 import tiktoken
 from typing import List, Dict, Optional, Any
 from datetime import datetime
@@ -136,7 +137,28 @@ class ContextManager:
         Returns:
             List of relevant memory entries
         """
-        return self.memory.recall_similar(query, limit=limit)
+        start_time = time.time()
+        results = self.memory.recall_similar(query, limit=limit)
+        duration = time.time() - start_time
+        if duration > 0.5:
+             logger.log_info(f"Memory retrieval took {duration:.2f}s")
+        return results
+    
+    def get_scratchpad_content(self) -> str:
+        """
+        Get the current content of the scratchpad.
+        Creates file if it doesn't exist.
+        """
+        path = Config.SCRATCHPAD_FILE
+        if not path.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("# Scratchpad\n\nUse this space for notes, todo lists, and temporary variables.", encoding='utf-8')
+        
+        try:
+            return path.read_text(encoding='utf-8')
+        except Exception as e:
+            logger.log_error(e, "Failed to read scratchpad")
+            return ""
     
     def save_state(self, additional_data: Optional[Dict] = None):
         """

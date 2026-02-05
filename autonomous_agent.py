@@ -205,6 +205,9 @@ class AutonomousAgent:
             for m in relevant_memories
         ])
         
+        # Get scratchpad content
+        scratchpad = self.context.get_scratchpad_content()
+        
         # Build prompt
         system_prompt = f"""You are an autonomous agent with unrestricted terminal access on a Linux VM.
 Your goal: {self.goal}
@@ -215,10 +218,14 @@ You can execute any bash/shell command. You should:
 3. Learn from command outputs and past experiences
 4. Adapt your plan based on results
 5. Be resourceful and creative
-6. Remember useful patterns and solutions for future use"""
+6. Remember useful patterns and solutions for future use
+7. Use 'data/scratchpad.md' to keep notes, todo lists, and track temporary state (use reading/writing commands)"""
         
         user_prompt = f"""Current Step: {step.description}
 Expected Outcome: {step.expected_outcome}
+
+Current Scratchpad (data/scratchpad.md):
+{scratchpad}
 
 Recent Command History:
 {recent_commands_text if recent_commands_text else "No recent commands"}
@@ -242,7 +249,10 @@ Important: Each field can span multiple lines. Start each field with its label f
         
         try:
             logger.log_llm_request(messages, self.llm_client.model)
+            start_time = time.time()
             response = self.llm_client.send_message(messages)
+            duration = time.time() - start_time
+            logger.log_info(f"LLM request took {duration:.2f}s")
             logger.log_llm_response(response['content'], response.get('usage'))
             
             # Parse response with multi-line support

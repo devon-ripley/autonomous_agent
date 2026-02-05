@@ -11,6 +11,7 @@ An experimental autonomous agent with unrestricted terminal access, powered by O
 - **Continuous Mode**: AI automatically generates new goals after completing current ones
 - **LLM-Assisted Error Recovery**: Ask LLM for fixes when commands fail
 - **Learning Storage**: Captures and stores insights for future use
+- **Scratchpad System**: Persistent markdown notebook (`data/scratchpad.md`) for maintaining short-term context
 - **Error Recovery**: Automatic retry logic with past solution lookup
 - **State Persistence**: Resume from previous sessions
 - **Rate Limiting**: Configurable delay between API calls

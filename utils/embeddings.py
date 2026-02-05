@@ -17,6 +17,11 @@ class EmbeddingGenerator:
             model_name: Name of the sentence transformer model to use
         """
         print(f"Loading embedding model '{model_name}'... (this may take a moment on first run)")
+        
+        # Suppress benign warnings from transformers about unused weights
+        import logging
+        logging.getLogger("transformers").setLevel(logging.ERROR)
+        
         self.model = SentenceTransformer(model_name)
         self.dimension = self.model.get_sentence_embedding_dimension()
         print(f"Embedding model loaded (dimension: {self.dimension})")
